@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Selector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 36px;
+            max-width: 560px;
+            width: 100%;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f4f8;
+        }
+        .header-icon { font-size: 32px; }
+        .header-text h1 { font-size: 22px; color: #1a1a2e; font-weight: 700; }
+        .header-text p { font-size: 13px; color: #666; margin-top: 3px; }
+        .progress { display: flex; gap: 6px; margin-bottom: 28px; }
+        .progress-step {
+            flex: 1; height: 4px; background: #e0e0e0;
+            border-radius: 2px; transition: background 0.3s;
+        }
+        .progress-step.active { background: #1a73e8; }
+        .progress-step.complete { background: #34a853; }
+        .field-group { margin-bottom: 20px; }
+        .field-label {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 8px;
+        }
+        label { font-weight: 600; color: #333; font-size: 14px; }
+        .required { color: #d32f2f; }
+        .step-badge {
+            background: #e8f0fe; color: #1a73e8;
+            font-size: 11px; font-weight: 600;
+            padding: 2px 8px; border-radius: 10px;
+        }
+        select, input {
+            width: 100%; padding: 11px 14px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; background: white;
+            transition: all 0.2s; color: #333;
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+        input { background-image: none; }
+        select:focus, input:focus {
+            outline: none; border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+        }
+        select:disabled {
+            background-color: #f8f9fa; color: #aaa;
+            cursor: not-allowed; border-color: #e8e8e8;
+        }
+        input:disabled {
+            background-color: #f8f9fa; color: #aaa;
+            cursor: not-allowed; border-color: #e8e8e8;
+        }
+        small { color: #888; font-size: 12px; margin-top: 5px; display: block; }
+        .divider { height: 1px; background: #f0f4f8; margin: 24px 0; }
+        .btn-apply {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+            color: white; border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; display: flex;
+            align-items: center; justify-content: center;
+            gap: 8px; margin-top: 8px;
+        }
+        .btn-apply:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(26,115,232,0.35);
+        }
+        .btn-apply:disabled {
+            background: linear-gradient(135deg, #ccc 0%, #bbb 100%);
+            cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        .status {
+            margin-top: 16px; padding: 12px 16px;
+            border-radius: 8px; font-size: 13px; font-weight: 500;
+            display: none; align-items: center; gap: 8px;
+        }
+        .status.loading { background: #e8f0fe; color: #1557b0; display: flex; }
+        .status.error { background: #fce8e6; color: #c62828; display: flex; }
+        .status.success { background: #e6f4ea; color: #1e7e34; display: flex; }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(21,87,176,0.3);
+            border-top-color: #1557b0; border-radius: 50%;
+            animation: spin 0.7s linear infinite; flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .selected-summary {
+            background: #f8f9fa; border: 1px solid #e0e0e0;
+            border-radius: 8px; padding: 16px;
+            margin-top: 20px; display: none;
+        }
+        .selected-summary h3 {
+            font-size: 13px; color: #666; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+        }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .summary-item { display: flex; flex-direction: column; gap: 2px; }
+        .summary-item-label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; }
+        .summary-item-value { font-size: 14px; color: #1a1a2e; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-icon">🚗</div>
+            <div class="header-text">
+                <h1>Vehicle Selector</h1>
+                <p>Select vehicle details to auto-fill Zoho CRM</p>
+            </div>
+        </div>
+
+        <div class="progress">
+            <div class="progress-step" id="step1"></div>
+            <div class="progress-step" id="step2"></div>
+            <div class="progress-step" id="step3"></div>
+            <div class="progress-step" id="step4"></div>
+            <div class="progress-step" id="step5"></div>
+        </div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <label>Year <span class="required">*</span></label>
+                <span class="step-badge">Step 1</span>
+            </div>
+            <select id="year"><option value="">Select Year...</option></select>
+        </div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <label>Make <span class="required">*</span></label>
+                <span class="step-badge">Step 2</span>
+            </div>
+            <select id="make" disabled><option value="">Select Year First...</option></select>
+        </div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <label>Model <span class="required">*</span></label>
+                <span class="step-badge">Step 3</span>
+            </div>
+            <select id="model" disabled><option value="">Select Make First...</option></select>
+        </div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <label>Trim</label>
+                <span class="step-badge">Step 4</span>
+            </div>
+            <input type="text" id="trim" placeholder="e.g., LX, EX, Sport, Premium" disabled>
+            <small>Enter manually or leave blank</small>
+        </div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <label>Engine</label>
+                <span class="step-badge">Step 5</span>
+            </div>
+            <input type="text" id="engine" placeholder="e.g., 2.5L 4-Cylinder, 5.0L V8" disabled>
+            <small>Enter manually or leave blank</small>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="selected-summary" id="summary">
+            <h3>Selected Vehicle</h3>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-item-label">Year</span>
+                    <span class="summary-item-value" id="sum-year">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">Make</span>
+                    <span class="summary-item-value" id="sum-make">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">Model</span>
+                    <span class="summary-item-value" id="sum-model">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">Trim</span>
+                    <span class="summary-item-value" id="sum-trim">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">Engine</span>
+                    <span class="summary-item-value" id="sum-engine">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn-apply" id="applyBtn" disabled onclick="applySelection()">
+            ✓ Apply to Zoho CRM
+        </button>
+    </div>
+
+    <script>
+        const isPopup = window.opener !== null;
+
+        function initializeYearDropdown() {
+            const yearSelect = document.getElementById('year');
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear + 1; year >= 1990; year--) {
+                const opt = document.createElement('option');
+                opt.value = year;
+                opt.textContent = year;
+                yearSelect.appendChild(opt);
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('year').addEventListener('change', function() {
+                updateProgress(1);
+                if (this.value) {
+                    loadMakes(this.value);
+                } else {
+                    resetField('make', 'Select Year First...');
+                    resetField('model', 'Select Make First...');
+                    disableInputs();
+                }
+            });
+
+            document.getElementById('make').addEventListener('change', function() {
+                if (this.value) {
+                    updateProgress(2);
+                    loadModels(document.getElementById('year').value, this.value);
+                } else {
+                    resetField('model', 'Select Make First...');
+                    disableInputs();
+                }
+            });
+
+            document.getElementById('model').addEventListener('change', function() {
+                if (this.value) {
+                    updateProgress(3);
+                    document.getElementById('trim').disabled = false;
+                    document.getElementById('engine').disabled = false;
+                    updateSummary();
+                    updateApplyButton();
+                } else {
+                    disableInputs();
+                    updateApplyButton();
+                }
+            });
+
+            document.getElementById('trim').addEventListener('input', function() {
+                if (this.value) updateProgress(4);
+                updateSummary();
+            });
+
+            document.getElementById('engine').addEventListener('input', function() {
+                if (this.value) updateProgress(5);
+                updateSummary();
+            });
+        }
+
+        function loadMakes(year) {
+            showStatus('loading', 'Loading makes...');
+            resetField('make', 'Loading...');
+            resetField('model', 'Select Make First...');
+            disableInputs();
+
+            fetch('https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/car?format=json')
+                .then(r => r.json())
+                .then(data => {
+                    resetField('make', 'Select Make...');
+                    if (data.Results && data.Results.length > 0) {
+                        const makes = data.Results.sort((a, b) => a.MakeName.localeCompare(b.MakeName));
+                        const makeSelect = document.getElementById('make');
+                        makes.forEach(make => {
+                            const opt = document.createElement('option');
+                            opt.value = make.MakeName;
+                            opt.textContent = make.MakeName;
+                            makeSelect.appendChild(opt);
+                        });
+                        makeSelect.disabled = false;
+                    }
+                    hideStatus();
+                })
+                .catch(() => showStatus('error', 'Failed to load makes. Please try again.'));
+        }
+
+        function loadModels(year, make) {
+            showStatus('loading', 'Loading models...');
+            resetField('model', 'Loading...');
+            disableInputs();
+
+            fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/${encodeURIComponent(make)}/modelyear/${year}?format=json`)
+                .then(r => r.json())
+                .then(data => {
+                    resetField('model', 'Select Model...');
+                    if (data.Results && data.Results.length > 0) {
+                        const models = data.Results.sort((a, b) => a.Model_Name.localeCompare(b.Model_Name));
+                        const modelSelect = document.getElementById('model');
+                        models.forEach(model => {
+                            const opt = document.createElement('option');
+                            opt.value = model.Model_Name;
+                            opt.textContent = model.Model_Name;
+                            modelSelect.appendChild(opt);
+                        });
+                        modelSelect.disabled = false;
+                    } else {
+                        showStatus('error', `No models found for ${make} ${year}.`);
+                    }
+                    hideStatus();
+                })
+                .catch(() => showStatus('error', 'Failed to load models. Please try again.'));
+        }
+
+        function resetField(id, placeholder) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<option value="">${placeholder}</option>`;
+            el.disabled = true;
+        }
+
+        function disableInputs() {
+            document.getElementById('trim').disabled = true;
+            document.getElementById('trim').value = '';
+            document.getElementById('engine').disabled = true;
+            document.getElementById('engine').value = '';
+            document.getElementById('summary').style.display = 'none';
+            updateApplyButton();
+        }
+
+        function updateApplyButton() {
+            const year = document.getElementById('year').value;
+            const make = document.getElementById('make').value;
+            const model = document.getElementById('model').value;
+            document.getElementById('applyBtn').disabled = !(year && make && model);
+        }
+
+        function updateSummary() {
+            const year = document.getElementById('year').value;
+            const make = document.getElementById('make').value;
+            const model = document.getElementById('model').value;
+            const trim = document.getElementById('trim').value;
+            const engine = document.getElementById('engine').value;
+
+            if (year && make && model) {
+                document.getElementById('sum-year').textContent = year;
+                document.getElementById('sum-make').textContent = make;
+                document.getElementById('sum-model').textContent = model;
+                document.getElementById('sum-trim').textContent = trim || 'N/A';
+                document.getElementById('sum-engine').textContent = engine || 'N/A';
+                document.getElementById('summary').style.display = 'block';
+                updateApplyButton();
+            }
+        }
+
+        function updateProgress(step) {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`step${i}`);
+                if (i < step) el.className = 'progress-step complete';
+                else if (i === step) el.className = 'progress-step active';
+                else el.className = 'progress-step';
+            }
+        }
+
+        function showStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            if (type === 'loading') {
+                status.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+            } else {
+                status.innerHTML = `<span>${type === 'error' ? '⚠️' : '✓'} ${message}</span>`;
+                if (type !== 'success') setTimeout(hideStatus, 5000);
+            }
+        }
+
+        function hideStatus() {
+            const status = document.getElementById('status');
+            status.className = 'status';
+            status.innerHTML = '';
+        }
+
+        function applySelection() {
+            const year = document.getElementById('year').value;
+            const make = document.getElementById('make').value;
+            const model = document.getElementById('model').value;
+            const trim = document.getElementById('trim').value;
+            const engine = document.getElementById('engine').value;
+
+            if (!year || !make || !model) {
+                showStatus('error', 'Please select Year, Make, and Model before applying.');
+                return;
+            }
+
+            const vehicleData = {
+                type: 'VEHICLE_SELECTION',
+                Year: year,
+                Make: make,
+                Model: model,
+                Trim: trim || '',
+                Engine: engine || ''
+            };
+
+            if (isPopup && window.opener) {
+                // Send to parent Zoho CRM window
+                window.opener.postMessage(vehicleData, '*');
+                showStatus('success', 'Applied to Zoho CRM! Closing...');
+                setTimeout(() => window.close(), 1500);
+            } else if (window.parent !== window) {
+                // Embedded in iframe
+                window.parent.postMessage(vehicleData, '*');
+                showStatus('success', 'Vehicle applied successfully!');
+            } else {
+                // Fallback: clipboard
+                const text = `Year: ${year}\nMake: ${make}\nModel: ${model}\nTrim: ${trim || 'N/A'}\nEngine: ${engine || 'N/A'}`;
+                navigator.clipboard.writeText(text).then(() => {
+                    showStatus('success', 'Copied to clipboard! Paste into Zoho CRM fields.');
+                });
+            }
+        }
+
+        initializeYearDropdown();
+        setupEventListeners();
+    </script>
+</body>
+</html>
