@@ -411,31 +411,61 @@
                 return;
             }
 
-            const vehicleData = {
-                type: 'VEHICLE_SELECTION',
-                Year: year,
-                Make: make,
-                Model: model,
-                Trim: trim || '',
-                Engine: engine || ''
-            };
-
+            // Method 1: Try direct ZDK access via window.opener
             if (isPopup && window.opener) {
-                // Send to parent Zoho CRM window
-                window.opener.postMessage(vehicleData, '*');
-                showStatus('success', 'Applied to Zoho CRM! Closing...');
-                setTimeout(() => window.close(), 1500);
-            } else if (window.parent !== window) {
-                // Embedded in iframe
-                window.parent.postMessage(vehicleData, '*');
-                showStatus('success', 'Vehicle applied successfully!');
-            } else {
-                // Fallback: clipboard
-                const text = `Year: ${year}\nMake: ${make}\nModel: ${model}\nTrim: ${trim || 'N/A'}\nEngine: ${engine || 'N/A'}`;
-                navigator.clipboard.writeText(text).then(() => {
-                    showStatus('success', 'Copied to clipboard! Paste into Zoho CRM fields.');
-                });
+                try {
+                    const ZDK = window.opener.ZDK;
+                    if (ZDK) {
+                        ZDK.Page.getField('Year').setValue(year);
+                        ZDK.Page.getField('Make').setValue(make);
+                        ZDK.Page.getField('Model').setValue(model);
+                        if (trim) ZDK.Page.getField('Trim').setValue(trim);
+                        if (engine) ZDK.Page.getField('Engine').setValue(engine);
+                        showStatus('success', 'Applied to Zoho CRM! Closing...');
+                        setTimeout(() => window.close(), 1500);
+                        return;
+                    }
+                } catch(e) {
+                    console.log('ZDK method failed, trying postMessage:', e);
+                }
+
+                // Method 2: postMessage
+                try {
+                    window.opener.postMessage({
+                        type: 'VEHICLE_SELECTION',
+                        Year: year,
+                        Make: make,
+                        Model: model,
+                        Trim: trim || '',
+                        Engine: engine || ''
+                    }, '*');
+                    showStatus('success', 'Applied! Closing...');
+                    setTimeout(() => window.close(), 1500);
+                    return;
+                } catch(e) {
+                    console.log('postMessage failed:', e);
+                }
             }
+
+            // Method 3: iframe postMessage
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'VEHICLE_SELECTION',
+                    Year: year,
+                    Make: make,
+                    Model: model,
+                    Trim: trim || '',
+                    Engine: engine || ''
+                }, '*');
+                showStatus('success', 'Vehicle applied successfully!');
+                return;
+            }
+
+            // Method 4: Fallback - clipboard
+            const text = `Year: ${year}\nMake: ${make}\nModel: ${model}\nTrim: ${trim || 'N/A'}\nEngine: ${engine || 'N/A'}`;
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('success', 'Copied to clipboard! Paste into Zoho CRM fields.');
+            });
         }
 
         initializeYearDropdown();
